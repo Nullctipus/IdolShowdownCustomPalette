@@ -32,7 +32,7 @@ public class Plugin : MonoBehaviour
     private void OnDisable() {
         enabled = true;
     }
-    Rect windowRect = new(500, 10, 700, 1000);
+    Rect windowRect = new(500, 10, 2000, 1000);
     KeyCode ToggleWindow = KeyCode.F4;
     bool DrawWindow = false;
     int windowID = GUID.GetHashCode();
@@ -69,13 +69,16 @@ public class Plugin : MonoBehaviour
     GUIStyle Style{
         get{
             if(style == null)
-                style = GUI.skin.box;
+                style = new(GUI.skin.box);
+                style.normal.background = Texture2D.whiteTexture;
             return style;
         }
         
     }
     string colorHex;
     static Color GetColor(string hex){
+        if(hex == "NONE") return Color.white;
+        
         Color ret = new();
         if(hex.StartsWith("#")) hex = hex.Substring(1);
 
@@ -98,34 +101,42 @@ public class Plugin : MonoBehaviour
 
         return hex;
     }
+
     void DrawEditor(){
-        GUILayout.BeginArea(new Rect(0, 40, 300, 950));
-            if(GUILayout.Button("Save Palettes")){
+        //GUILayout.BeginArea(new Rect(0, 40, 300, 30*(Palettes.Count+2)));
+        
+        scroll = GUI.BeginScrollView(new Rect(0, 40, 300, 950),scroll,new Rect(0, 0, 300, 25*(Palettes.Count+2)),false,false,GUIStyle.none,GUI.skin.verticalScrollbar);
+            if(GUI.Button(new Rect(0,0,280,20),"Save Palettes")){
                 File.WriteAllText(Path.Combine(Application.streamingAssetsPath, "../..", "IdolPalettes.json"), JsonConvert.SerializeObject(Palettes,Formatting.Indented));
             }
-            GUILayout.BeginHorizontal();
-                _NewPaletteName = GUILayout.TextField(_NewPaletteName);
-                if(GUILayout.Button("Create Palette")){
+                _NewPaletteName = GUI.TextField(new Rect(0,25,180,20),_NewPaletteName);
+                if(GUI.Button(new Rect(180,25,100,20),"Create Palette")){
                     if(!String.IsNullOrEmpty(_NewPaletteName))
                         NewPalette(_NewPaletteName);
                 }
-            GUILayout.EndHorizontal();
+                int j = 1;
             foreach(var v in Palettes){
-                if(GUILayout.Button(v.Key))
+                if(GUI.Button(new Rect(0,++j*25,280,20),v.Key))
                     EditPalette = v.Key;
             }
-        GUILayout.EndArea();
-        GUILayout.BeginArea(new Rect(310, 40, 100, 950));
-            if(!String.IsNullOrEmpty(EditPalette)){
+        GUI.EndScrollView();
+        //GUILayout.EndArea();
+        //GUILayout.BeginArea(new Rect(310, 40, 100, 30*49));
+        GUI.BeginScrollView(new Rect(310, 40, 120, 950),scroll,new Rect(0,0,120,30*49),false,false,GUIStyle.none,GUIStyle.none);
+            if(!String.IsNullOrEmpty(EditPalette))
+            {
+                Color last = GUI.backgroundColor;
                 for(int i = 0; i<48;i++){
-                    Style.active.textColor = GetColor(Palettes[EditPalette][i]);
-                    if(GUILayout.Button("Colour "+i,style)){
+                    GUI.backgroundColor = GetColor(Palettes[EditPalette][i]);
+                    if(GUI.Button(new Rect(0,25*i,100,20),"Colour "+i,Style)){
                         EditColour = i;
                         colorHex = Palettes[EditPalette][i];
                     }
                 }
+                GUI.backgroundColor = last;
             }
-        GUILayout.EndArea();
+        GUI.EndScrollView();
+        //GUILayout.EndArea();
         GUILayout.BeginArea(new Rect(420, 40, 280, 950));
             if(!String.IsNullOrEmpty(EditPalette) && EditColour != -1){
                 GUILayout.BeginHorizontal();
@@ -138,54 +149,67 @@ public class Plugin : MonoBehaviour
         GUILayout.EndArea();
     }
     string SelectedIdol;
+    Vector2 scroll = Vector2.zero;
+    Vector2 scrollPosition = Vector2.zero;
     void DrawSelection(){
         if(Characters == null) return;
 
         GUILayout.BeginArea(new Rect(0, 40, 300, 950));
             foreach(var i in Characters){
-                if(GUILayout.Button(i.charName, i.charName == SelectedIdol ? Style : GUI.skin.button))
+                if(GUILayout.Button(i.charName, i.charName == SelectedIdol ? GUI.skin.box : GUI.skin.button))
                     SelectedIdol = i.charName;
-                
             }
         GUILayout.EndArea();
-        GUILayout.BeginArea(new Rect(310, 40, 390, 950));
-            if(!String.IsNullOrEmpty(SelectedIdol)){
-                if(SelectedPalette.ContainsKey(SelectedIdol) && GUILayout.Button("No Color Change"))
+        //GUILayout.BeginArea(new Rect(310, 40, 390, 30*(Palettes.Count+1)));
+        if(!String.IsNullOrEmpty(SelectedIdol)){
+            scroll = GUI.BeginScrollView(new Rect(310, 40, 220, 980),scroll,new Rect(0, 0, 220, 25*(Palettes.Count+1)),false,false,GUIStyle.none,GUI.skin.verticalScrollbar);
+            
+                if(SelectedPalette.ContainsKey(SelectedIdol) && GUI.Button(new Rect(0,0,200,20),"No Color Change"))
                     SelectedPalette.Remove(SelectedIdol);
+                    int i = 1;
                 foreach(var v in Palettes)
-                    if(GUILayout.Button(v.Key,(SelectedPalette.ContainsKey(SelectedIdol) && v.Key == SelectedPalette[SelectedIdol]) ? Style : GUI.skin.button))
+                    if(GUI.Button(new Rect(0,25*i++,200,20),v.Key,(SelectedPalette.ContainsKey(SelectedIdol) && v.Key == SelectedPalette[SelectedIdol]) ? GUI.skin.box : GUI.skin.button))
                         {
                             if(SelectedPalette.ContainsKey(SelectedIdol))
                                 SelectedPalette[SelectedIdol] = v.Key;
                             else
                                 SelectedPalette.Add(SelectedIdol, v.Key);
                         }
-            }
-        GUILayout.EndArea();
+            
+            GUI.EndScrollView();
+        }
+        //GUILayout.EndArea();
     }
     int tab = 0;
     void DoWindow(int idx)
     {
-        try{
-        GUILayout.BeginHorizontal();
-        if(GUILayout.Button("Selection")){
-            tab = 0;
+        try
+        {
+            GUILayout.BeginHorizontal();
+            if(GUILayout.Button("Selection")){
+                tab = 0;
+            }
+            if(GUILayout.Button("Editor")){
+                tab = 1;
+            }
+            if(GUILayout.Button("Extract Default"))
+                ExportDefaultPalettes();
+            GUILayout.EndHorizontal();
+            
+                if(tab == 0) DrawSelection();
+                else DrawEditor();
         }
-        if(GUILayout.Button("Editor")){
-            tab = 1;
-        }
-        GUILayout.EndHorizontal();
-        if(tab == 0) DrawSelection();
-        else DrawEditor();
-        }catch(Exception e){
+        catch(Exception e)
+        {
             Plugin.Logging.LogError(e);
         }
     }
-    private void NewPalette(string name){
+    private void NewPalette(string name)
+    {
         if(Palettes.ContainsKey(name)) return;
-        Palettes.Add(name,new());
+        Palettes.Add(name,new string[48]);
         for(int i = 0;i<48;i++)
-            Palettes[name].Add(i,"#FFFFFFFF");
+            Palettes[name][i] = "NONE";
         
     }
     private void Awake()
@@ -195,6 +219,23 @@ public class Plugin : MonoBehaviour
         HarmonyPatches.Init();
         
 
+    } 
+    public void ExportDefaultPalettes()
+    {
+        if(Characters == null) return;
+
+        foreach(var c in characters){
+            for(int p =0;p<c.paletteSwapMaterials.Count;p++){
+                if(!Palettes.ContainsKey(c.charName+p)) Palettes.Add(c.charName+p,new string[48]);
+                for(int i = 0;i<48;i++){
+                    if(c.charName == "Coco" && p == 0)// Coco's First color is bugged
+                        Palettes["Coco0"][i] = GetHex(c.paletteSwapMaterials[1].GetColor("inColour"+i)); 
+                    else
+                        Palettes[c.charName+p][i] = GetHex(c.paletteSwapMaterials[p].GetColor("outColour"+i)); 
+                }
+                    
+            }
+        }
     }
 
     public static void ApplyPalette(string idol, SpriteRenderer renderer)
@@ -202,7 +243,10 @@ public class Plugin : MonoBehaviour
         if (!SelectedPalette.ContainsKey(idol)) return;
         for (int i = 0; i < 48; i++)
         {
-            renderer.material.SetColor("outColour" + i, GetColor(Palettes[SelectedPalette[idol]][i]));
+            if(idol == "Coco" && Palettes.ContainsKey("Coco0"))
+                renderer.material.SetColor("inColour" + i, GetColor(Palettes["Coco0"][i]));
+            if(Palettes[SelectedPalette[idol]][i] != "NONE")
+                renderer.material.SetColor("outColour" + i, GetColor(Palettes[SelectedPalette[idol]][i]));
         }
     }
     public static void ApplyPalette(IdolShowdown.Managers.GameCharacterManager.PlayerCharacter player)
@@ -212,17 +256,18 @@ public class Plugin : MonoBehaviour
     static Dictionary<string, string> SelectedPalette = new();
 
     [SerializeField]
-    static Dictionary<string, Dictionary<int, string>> Palettes;
+    static Dictionary<string,  string[]> Palettes;
     static void LoadPalettesFromDisk()
     {
 
         string path = Path.Combine(Application.streamingAssetsPath, "../..", "IdolPalettes.json");
         try
         {
-            Palettes = JsonConvert.DeserializeObject<Dictionary<string, Dictionary<int, string>>>(File.ReadAllText(path));
+            Palettes = JsonConvert.DeserializeObject<Dictionary<string, string[]>>(File.ReadAllText(path));
         }
-        catch
+        catch(Exception e)
         {
+            Logging.LogError(e);
             Palettes = new();
             File.WriteAllText(path, JsonConvert.SerializeObject(Palettes,Formatting.Indented));
         }
