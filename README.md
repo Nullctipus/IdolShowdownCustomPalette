@@ -8,9 +8,9 @@
 ## Installation
 Install [Bepinex5](https://github.com/BepInEx/BepInEx)
 
-Download IdolShowdownCustomColorPalette.dll from [Releases](https://github.com/Nullctipus/IdolShowdownCustomColorPalette/releases/latest)
+Download CustomPalette.dll from [Releases](https://github.com/Nullctipus/IdolShowdownCustomColorPalette/releases/latest)
 
-Install IdolShowdownCustomColorPalette.dll to Idol Showdown/Bepinex/plugins
+Install CustomPalette.dll to Idol Showdown/Bepinex/plugins
 
 ## Usage
 F4: Toggle Menu
